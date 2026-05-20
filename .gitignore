@@ -7,6 +7,7 @@
 *.dll
 *.so
 *.dylib
+.gocache
 
 # Test binary, built with `go test -c`
 *.test
@@ -31,5 +32,11 @@ go.work.sum
 # .idea/
 # .vscode/
 
-# claude
+# AI
 CLAUDE.md
+.claude/
+agents.md
+.agents/
+
+# mac 
+.DS_Store
