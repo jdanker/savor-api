@@ -18,9 +18,9 @@ func Load() (Config, error){
 	}
 	port := ":" + portStr
 
-	apikey := os.Getenv("GOOGLE_PLACE_API_KEY")
+	apikey := os.Getenv("GOOGLE_PLACES_API_KEY")
 	if apikey == "" {
-		return Config{}, fmt.Errorf("GOOGLE_PLACE_API_KEY required")
+		return Config{}, fmt.Errorf("GOOGLE_PLACES_API_KEY required")
 	}
 	env := os.Getenv("ENVIRONMENT")
 	if env == "" {
