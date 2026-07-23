@@ -1,56 +1,66 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Guidance for Claude Code when working in this repository.
+
+## What this service is
+
+`savor-api` is a Go HTTP API backing **Savor**, an iOS restaurant discovery app.
+It is a places intelligence layer between the iOS app and third-party place APIs
+(Google Places now; Yelp/Apple Maps later). The iOS app never calls external place
+APIs directly — all place search and enrichment flows through this service, keeping
+API keys off the device.
+
+**Structure, boundaries, and current state live in `docs/` — read before non-trivial work:**
+- `docs/ARCHITECTURE.md` — system diagrams, invariants, Code Map (every file, one line)
+- `docs/STATE.md` — where the project stands right now
+- `docs/TODO.md` — actionable backlog; pull next steps from here
+- `docs/decisions.md` — why non-obvious choices were made
+- `docs/concepts/` — one file per concept new to this project
 
 ## Commands
 
 ```bash
-go run ./cmd/server          # start the server locally (reads .env via godotenv)
-go build ./...                # build all packages
-go test ./...                 # run all tests (no test files exist yet)
-go vet ./...                  # static checks
+go run ./cmd/server          # start locally (reads .env via godotenv)
+go build ./...               # build all packages
+go test ./...                # run all tests
+go vet ./...                 # static checks
 ```
 
-Requires a local `.env` (gitignored) with at least `GOOGLE_PLACES_API_KEY` set — `config.Load()`
-fails fast (returns an error, and `main.go` calls `log.Fatalf`) if it's missing. `PORT` (default
-`8080`) and `ENVIRONMENT` (default `development`) are optional.
-
-## What this service is
-
-`savor-api` is a Go HTTP API that acts as the backend for **Savor**, an iOS restaurant discovery and wishlist app built with SwiftUI. It is a **places intelligence layer** between the Savor iOS app and third-party place APIs (Google Places, and eventually Yelp, Apple Maps, etc.). The iOS app never calls external place APIs directly — all place search and enrichment flows through this service, keeping API keys off the device.
-
-## Current phase
-
-**Phase 1** — scaffolding a basic Go HTTP server and proxying Google Places API search and detail endpoints.
+Requires a local `.env` (gitignored) with `GOOGLE_PLACES_API_KEY` set —
+`config.Load()` fails fast if missing. `PORT` (default `8080`) and `ENVIRONMENT`
+(default `development`) are optional.
 
 ## Stack
 
-- **Language:** Go, stdlib `net/http` (chi router may be added soon)
-- **External APIs:** Google Places API (HTTP REST, no Go SDK)
-- **Config:** Environment variables for all secrets (`.env` locally, platform env vars in production)
-- **Deployment:** Railway
+Go stdlib `net/http` (chi only if middleware needs justify it), Google Places REST
+API (no SDK — deliberate, see decisions.md), env vars for all secrets, deployed on
+Railway (TLS at platform).
 
-## Project structure (current, not aspirational)
+## Collaboration ground rules
 
-```
-savor-api/
-├── cmd/server/main.go         ← entry point: loads .env + config, registers routes, starts http.Server
-├── internal/config/config.go  ← env var loading (Config struct)
-├── internal/handlers/health.go← GET /health — only route that exists so far
-├── internal/models/place.go   ← Place struct (Google-shaped fields; not yet consumed anywhere)
-├── .env                       ← local secrets, gitignored
-├── go.mod
-└── go.sum
-```
+The user is a platform/DevOps engineer learning Go web services by writing the code
+himself. Guide and review; don't dump full implementations unless asked. Explain
+trade-offs before implementing. Flag anti-patterns instead of quietly fixing them.
 
-Note: `internal/places/` (a Google Places client) doesn't exist yet — `models.Place` is defined
-but nothing populates it yet. Routing uses stdlib `net/http.ServeMux` directly — chi hasn't been
-added despite being flagged as a likely near-term addition (see Stack below).
+## Living docs maintenance
 
-## Principles
+`docs/` is the project's memory. Rules:
 
-- **No API key leakage** — Google Places API keys never touch the iOS device
-- **Internal models only** — Google's response types never leak outside `internal/places`; always map to our own `Place` struct in `internal/models`
-- **Input validation** — validate all query params before hitting external APIs
-- **Security-first** — no hardcoded secrets, HTTPS enforced in production
-- **Idiomatic Go** — errors as values, no magic, keep it simple, strict typing
+- `STATE.md` — **overwrite** (never append) at session end: works now / in flight /
+  next / landmines. Under ~20 lines.
+- `ARCHITECTURE.md` Code Map — every new file gets a one-line entry **in the same
+  change that creates it**. Structural changes update the diagrams.
+- `concepts/` — create from `_template.md` when a concept/framework/technique first
+  appears in the project. Include `file:line` pointers.
+- `decisions.md` — append-only, one dated paragraph per non-obvious tradeoff.
+  A trade-off explained during a session should land here, not evaporate in chat.
+- `TODO.md` — actionable backlog. Bugs/chores found but not fixed in-session go
+  here (flagged anti-patterns included). Delete done items; prune ruthlessly.
+
+**Update triggers**: new dependency/framework/API; first use of a pattern; module
+boundary or data-flow change; non-obvious tradeoff decided. **Not**: bugfixes,
+styling, refactors within existing patterns. Test: "would future-me need this
+re-explained in 3 weeks?"
+
+**Cadence**: never interleave doc edits mid-implementation. At session end, propose
+all doc updates as one reviewable batch, then rewrite STATE.md.
