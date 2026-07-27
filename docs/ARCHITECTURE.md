@@ -14,18 +14,37 @@ flowchart LR
     iOS -.->|Phase 3+| SB[Supabase: auth, lists, social]
 ```
 
-## Request lifecycle (Phase 1 target)
+## Phase 1 API surface
+
+```
+POST /places/autocomplete                      → {placeID, primaryText, fullText}[]
+GET  /places/{id}?tier=save|enrich|coordinate  → models.Place (tier-scoped fields)
+GET  /places/{id}/photos?max=3                 → {uri, widthPx, heightPx, attributions}[]
+```
+
+`tier` is intent-named on purpose: field masks and their billing consequences stay
+server-side, and iOS never learns what a field mask is. `save` is the cheap on-add
+tier, `enrich` the expensive on-demand tier, `coordinate` the backfill.
+
+## Request lifecycle
 
 ```mermaid
 flowchart LR
-    R[Request] --> H[handlers: validate query params]
-    H --> P[places: call Google REST]
-    P --> M[places: map Google JSON to models.Place]
+    R[Request] --> H[handlers: validate params,<br/>searchSessionID, tier]
+    H --> P[places: field mask + auth,<br/>call Google REST]
+    P --> M[places: translate Google JSON<br/>to our vocabulary]
     M --> J[handlers: encode JSON response]
 ```
 
-Invariant: **Google response types never leave `internal/places`.** Handlers and
-models only ever see our own `Place` struct.
+Invariants:
+- **Google response types never leave `internal/places`.** Handlers and models only
+  ever see our own `Place` struct.
+- **`internal/places` translates, it does not pass through.** Google's vocabulary
+  (`"PRICE_LEVEL_MODERATE"`, photo names, enum strings) is converted to ours before
+  crossing the package boundary — see decisions.md.
+- **Session policy is server-side.** iOS mints `searchSessionID`; only `tier=save`
+  forwards it to Google.
+- **Validate before spending.** Malformed input is rejected before any billed call.
 
 ## Code Map
 <!-- Rule: every new file gets one line here, in the same change that creates it. -->
@@ -47,7 +66,8 @@ Shared domain structs. The API's public vocabulary.
 - `place.go` — `Place`: our provider-neutral place shape (ID, name, rating, price, types, coords, summaries, photo ref)
 
 ### internal/places/
-Google Places REST client (Phase 1). Owns auth, HTTP calls, and Google→`models.Place` mapping.
+Google Places (New) REST client (Phase 1). Owns auth, field masks, HTTP calls, and
+Google→our-vocabulary translation. One file per endpoint, sharing an unexported `Client`.
 - `client.go` — stub (package declaration only)
 
 ## Boundaries & principles
