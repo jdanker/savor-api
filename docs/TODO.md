@@ -23,7 +23,3 @@
 - [ ] `models.Place.PriceLevel` — change `string` → nullable int when `details.go` lands
 - [ ] Photo attributions — no field exists for them; Google's terms require display.
       Needs a home in the photos response shape (and eventually `PhotoCarouselView`)
-
-## Chores
-- [ ] Add Read/Write/Idle timeouts to `http.Server` before shipping real handlers
-- [ ] `go mod tidy` — godotenv is a direct dep, marked `// indirect`

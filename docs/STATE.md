@@ -6,6 +6,7 @@ _Last updated: 2026-07-26_
 - `/health` live on Railway; config loads from env (`PORT` 8080, `GOOGLE_PLACES_API_KEY`
   required + fails fast, `ENVIRONMENT` development)
 - `godotenv` loads `.env` locally; Railway injects env in prod
+- `http.Server` has read/write/idle timeouts (5s/10s/60s) — see concepts/http-server-timeouts.md
 - `models.Place` struct defined (not yet used by any handler)
 
 ## In flight
@@ -23,4 +24,4 @@ _Last updated: 2026-07-26_
 - Parity target is **Autocomplete**, not Text Search — iOS never text-searches
 - `models.Place.PriceLevel` still `string`; decided format is nullable int — change with `details.go`
 - No attribution field on `Place`; Google's terms require displaying photo attributions
-- `http.Server` has no Read/Write/Idle timeouts; `go mod tidy` still owed (godotenv `// indirect`)
+- `WriteTimeout` (10s) bounds the whole handler — `client.go`'s `http.Client` timeout must sit below it

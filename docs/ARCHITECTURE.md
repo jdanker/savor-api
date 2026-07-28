@@ -51,7 +51,7 @@ Invariants:
 
 ### cmd/server/
 Entry point. Wires config → mux → server. No business logic.
-- `main.go` — loads `.env` (godotenv), builds config, registers routes, starts `http.Server`
+- `main.go` — loads `.env` (godotenv), builds config, registers routes, starts `http.Server` with read/write/idle timeouts
 
 ### internal/config/
 Env-var config, loaded once at boot. Fails fast on missing required keys.
