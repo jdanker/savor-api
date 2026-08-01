@@ -6,7 +6,9 @@
 <!-- Parity target is what the iOS app actually does today: autocomplete, tiered
      details, photos. NOT Text Search — that's a future Discover tab, not v1. -->
 - [ ] `internal/places/client.go` — `Client` struct, constructor, shared
-      authenticated-request/decode helper. Reused `http.Client` with a timeout
+      authenticated-request/decode helper. Base URL is a **struct field, not a
+      package const** — that's what lets `httptest` swap in a fake Google. Own
+      `http.Client` with a timeout below the server's 10s `WriteTimeout`
 - [ ] `internal/places/autocomplete.go` — Autocomplete (New); Google response types
       stay unexported here
 - [ ] `internal/places/details.go` — Place Details; `tier` → field mask; price-level
@@ -21,5 +23,22 @@
 
 ## Model gaps
 - [ ] `models.Place.PriceLevel` — change `string` → nullable int when `details.go` lands
-- [ ] Photo attributions — no field exists for them; Google's terms require display.
-      Needs a home in the photos response shape (and eventually `PhotoCarouselView`)
+- [ ] Photo attributions — `authorAttributions` (displayName, uri, photoUri) comes back
+      per-photo in the details response; needs to survive into the photos response shape
+      and eventually render in `PhotoCarouselView`. Google's terms require display.
+- [ ] Gemini disclosure text — `generativeSummary` and `reviewSummary` both carry
+      `disclosureText: "Summarized with Gemini"`. Check whether Google's terms require
+      displaying it before building the detail UI.
+
+## Deferred (not Phase 1)
+- [ ] **Autocomplete match highlighting.** Dropped for Phase 1 — see decisions.md.
+      Google returns `matches: [{startOffset, endOffset}]` per text field, in **Unicode
+      code points**. Go maps cleanly (`[]rune`); Swift does *not* — `Character` is a
+      grapheme cluster, so reconstruction must index `String.unicodeScalars`, not
+      `Character`s. Can't be faked with a client-side substring search: Google's matches
+      come from spell correction and transliteration too, so "papy" legitimately
+      highlights "Pappy". Restoring it = wire-format change (breaks iOS decoding) +
+      `PlaceSuggestion` back to `AttributedString` + scalar-offset reconstruction.
+
+## Chores
+- [ ] `gofmt` `cmd/server/main.go` — trailing whitespace in the `http.Server` literal

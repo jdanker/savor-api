@@ -68,7 +68,10 @@ Shared domain structs. The API's public vocabulary.
 ### internal/places/
 Google Places (New) REST client (Phase 1). Owns auth, field masks, HTTP calls, and
 Google→our-vocabulary translation. One file per endpoint, sharing an unexported `Client`.
-- `client.go` — stub (package declaration only)
+- `client.go` — `Client` struct (apiKey, baseURL, `*http.Client`) + `New()`; base URL
+  is a defaulted field so httptest can override it. Request/decode helper + endpoints TBD.
+- `testdata/` — real Google JSON captured by curl (autocomplete, details save/enrich
+  tiers); Go tooling ignores `testdata/`, becomes httptest fixtures later
 
 ## Boundaries & principles
 - Errors as values, idiomatic Go; stdlib `net/http` until routing needs justify chi

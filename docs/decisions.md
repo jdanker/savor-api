@@ -1,6 +1,23 @@
 # Decisions
 <!-- Append-only. One dated paragraph per non-obvious tradeoff. Newest at top. -->
 
+**2026-07 — Autocomplete match highlighting dropped for Phase 1.** The iOS SDK
+returned pre-styled `attributedPrimaryText`; the REST API instead returns
+`matches: [{startOffset, endOffset}]` per text field — highlight ranges the client
+rebuilds into bold. Chose to drop highlighting: plain strings on the wire
+(`{placeID, primaryText, fullText}`), `matches` discarded inside `internal/places`.
+Consequence iOS-side: `PlaceSuggestion` can stop being `AttributedString` and
+become plain `String`, which deletes the only reason that type choice existed (see
+savor/concepts/placesproviding-seam.md). The regression is real but nearly
+invisible — highlighting only shows for the second or two of typing in the search
+sheet. Cost of reversing, recorded so future-me doesn't re-derive it: offsets are
+**Unicode code points**, so Go maps cleanly (`[]rune`) but Swift does *not* —
+`Character` is a grapheme cluster; reconstruction must index `String.unicodeScalars`.
+And it can't be faked with a client-side substring search, because Google's matches
+come from spell correction and transliteration ("papy" → highlights "Pappy").
+Reversible but not free: wire-format change breaks iOS decoding, plus the
+`AttributedString` + scalar-offset work. Tracked in TODO under Deferred.
+
 **2026-07 — Autocomplete session tokens: client mints, server enforces.** Google
 bills autocomplete per *session* — all keystroke requests plus the closing Details
 call bundle into one charge if they share a token. On a stateless Go server there's

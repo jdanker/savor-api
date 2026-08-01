@@ -38,3 +38,6 @@ CLAUDE.local.md
 
 # mac 
 .DS_Store
+
+# testing 
+internal/places/testdata
