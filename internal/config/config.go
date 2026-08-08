@@ -8,10 +8,10 @@ import (
 type Config struct {
 	Port               string
 	GooglePlacesAPIKey string
-	Environment 	   string 
+	Environment        string
 }
 
-func Load() (Config, error){
+func Load() (Config, error) {
 	portStr := os.Getenv("PORT")
 	if portStr == "" {
 		portStr = "8080"
@@ -27,13 +27,10 @@ func Load() (Config, error){
 		env = "development"
 	}
 
-
 	return Config{
-		Port: port,
+		Port:               port,
 		GooglePlacesAPIKey: apikey,
-		Environment: env,
+		Environment:        env,
 	}, nil
 
-
-	
 }

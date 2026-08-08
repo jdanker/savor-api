@@ -3,32 +3,20 @@
      forever. STATE.md is for awareness; this file is for work. -->
 
 ## Phase 1 — SDK parity
-<!-- Parity target is what the iOS app actually does today: autocomplete, tiered
-     details, photos. NOT Text Search — that's a future Discover tab, not v1. -->
-- [ ] `internal/places/client.go` — `Client` struct, constructor, shared
-      authenticated-request/decode helper. Base URL is a **struct field, not a
-      package const** — that's what lets `httptest` swap in a fake Google. Own
-      `http.Client` with a timeout below the server's 10s `WriteTimeout`
-- [ ] `internal/places/autocomplete.go` — Autocomplete (New); Google response types
-      stay unexported here
-- [ ] `internal/places/details.go` — Place Details; `tier` → field mask; price-level
-      string → nullable int (unknown values → nil, never error)
-- [ ] `internal/places/photos.go` — photo media with `skipHttpRedirect`; return URIs
-- [ ] `POST /places/autocomplete` — `searchSessionID` **required**, UUID-validated
-      before calling Google; structured-log the token for future ratio analysis
-- [ ] `GET /places/{id}?tier=save|enrich|coordinate` — reject unknown tiers;
-      forward `searchSessionID` only on `tier=save`
-- [ ] `GET /places/{id}/photos?max=3`
-- [ ] Point iOS `PlacesService` at these endpoints (blocked on the above)
+- [ ] Point iOS `PlacesService` at the three savor-api endpoints (all live now);
+      `PlaceSuggestion` drops `AttributedString` per decisions.md
+- [ ] Tests: httptest fake Google using `testdata/` fixtures — the whole reason
+      `baseUrl` is a struct field. Cover: autocomplete translation, tier→field-mask,
+      price-level → nullable int (incl. unknown → nil), non-200 upstream → error
+- [ ] Recapture `testdata/details_enrich.json` — file is empty (0 bytes); enrich
+      tier verified live but has no fixture for tests
 
 ## Model gaps
-- [ ] `models.Place.PriceLevel` — change `string` → nullable int when `details.go` lands
-- [ ] Photo attributions — `authorAttributions` (displayName, uri, photoUri) comes back
-      per-photo in the details response; needs to survive into the photos response shape
-      and eventually render in `PhotoCarouselView`. Google's terms require display.
+- [ ] Photo attributions — now returned by `GET /places/{id}/photos`; still needs
+      to render in iOS `PhotoCarouselView`. Google's terms require display.
 - [ ] Gemini disclosure text — `generativeSummary` and `reviewSummary` both carry
       `disclosureText: "Summarized with Gemini"`. Check whether Google's terms require
-      displaying it before building the detail UI.
+      displaying it before building the detail UI. (Currently dropped in translation.)
 
 ## Deferred (not Phase 1)
 - [ ] **Autocomplete match highlighting.** Dropped for Phase 1 — see decisions.md.
@@ -41,4 +29,6 @@
       `PlaceSuggestion` back to `AttributedString` + scalar-offset reconstruction.
 
 ## Chores
-- [ ] `gofmt` `cmd/server/main.go` — trailing whitespace in the `http.Server` literal
+- [ ] Photos worst case: 1 details + N sequential media calls, each on a 5s client
+      timeout — pathological slowness could exceed the server's 10s `WriteTimeout`.
+      Parallelize media calls or accept truncation if it ever shows up in logs.

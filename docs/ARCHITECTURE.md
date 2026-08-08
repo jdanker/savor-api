@@ -60,16 +60,27 @@ Env-var config, loaded once at boot. Fails fast on missing required keys.
 ### internal/handlers/
 HTTP layer. Input validation happens here, before anything external is called.
 - `health.go` — `GET /health`, static `{"status":"ok"}`
+- `places.go` — `PlacesHandler` (holds `*places.Client`): autocomplete (UUID-validates
+  `searchSessionID`, structured-logs it), details (tier parse, save-only token forward),
+  photos (max 1–10, default 3). Upstream errors log real cause, return generic 502.
 
 ### internal/models/
 Shared domain structs. The API's public vocabulary.
-- `place.go` — `Place`: our provider-neutral place shape (ID, name, rating, price, types, coords, summaries, photo ref)
+- `place.go` — `Place` (nullable-int `PriceLevel`, pointer `Coordinates`), `Suggestion`,
+  `Photo` + `PhotoAttribution` — all JSON-tagged wire shapes
 
 ### internal/places/
 Google Places (New) REST client (Phase 1). Owns auth, field masks, HTTP calls, and
 Google→our-vocabulary translation. One file per endpoint, sharing an unexported `Client`.
 - `client.go` — `Client` struct (apiKey, baseURL, `*http.Client`) + `New()`; base URL
-  is a defaulted field so httptest can override it. Request/decode helper + endpoints TBD.
+  is a defaulted field so httptest can override it. `do()`: shared request/decode helper
+  (auth + field mask as `X-Goog-*` headers, bounded error-body read).
+- `autocomplete.go` — `Autocomplete()`: restaurant/cafe/bar/bakery filter (iOS parity),
+  match offsets dropped, Google types unexported
+- `details.go` — `Details()`: `Tier` type + `ParseTier`, tier→field-mask map,
+  `translatePlace` (price-level enum → nullable int, unknown → nil)
+- `photos.go` — `Photos()`: photos-mask details call, then per-photo media call with
+  `skipHttpRedirect` → CDN URIs (800×600 max, iOS parity); one failed photo is skipped
 - `testdata/` — real Google JSON captured by curl (autocomplete, details save/enrich
   tiers); Go tooling ignores `testdata/`, becomes httptest fixtures later
 
